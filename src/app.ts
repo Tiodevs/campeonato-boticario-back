@@ -15,11 +15,23 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Middleware para CORS
-app.use(cors({
-  origin: envs.server.host,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true
-}));
+const corsOptions = process.env.NODE_ENV === 'production'
+  ? {
+      // Em produção, permite todas as origens (ajuste conforme necessário)
+      origin: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      credentials: true,
+      allowedHeaders: ['Content-Type', 'Authorization']
+    }
+  : {
+      // Em desenvolvimento, usa a origem configurada
+      origin: envs.server.host,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      credentials: true,
+      allowedHeaders: ['Content-Type', 'Authorization']
+    };
+
+app.use(cors(corsOptions));
 
 // Documentação Swagger
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, swaggerUiOptions));
