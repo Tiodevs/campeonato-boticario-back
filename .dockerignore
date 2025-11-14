@@ -1,0 +1,12 @@
+node_modules
+dist
+coverage
+src/__tests__
+npm-debug.log
+.env
+.DS_Store
+docker-compose.yml
+.git
+.github
+.vscode
+

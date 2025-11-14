@@ -39,7 +39,7 @@ describe('LoginController', () => {
     mockReq = {
       body: {
         email: 'teste@email.com',
-        senha: 'senha123'
+        senha: 'Senha123'
       }
     };
 
@@ -58,14 +58,14 @@ describe('LoginController', () => {
     await authController.login(mockReq as Request, mockRes as Response);
 
     expect(mockJson).toHaveBeenCalledWith(resultadoLogin);
-    expect(mockLogin).toHaveBeenCalledWith('teste@email.com', 'senha123');
+    expect(mockLogin).toHaveBeenCalledWith('teste@email.com', 'Senha123');
   });
 
   test('deve retornar 401 quando credenciais são inválidas', async () => {
     mockReq = {
       body: {
         email: 'teste@email.com',
-        senha: 'senha-incorreta'
+        senha: 'SenhaIncorreta123'
       }
     };
 
@@ -84,7 +84,7 @@ describe('LoginController', () => {
     mockReq = {
       body: {
         email: 'teste@email.com',
-        senha: 'senha123'
+        senha: 'Senha123'
       }
     };
 
@@ -103,7 +103,7 @@ describe('LoginController', () => {
     mockReq = {
       body: {
         email: 'teste@email.com',
-        senha: 'senha123'
+        senha: 'Senha123'
       }
     };
 

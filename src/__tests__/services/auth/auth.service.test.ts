@@ -1,6 +1,7 @@
 import { AuthService } from '../../../services/auth/auth.service';
 import { EmailService } from '../../../services/email/email.service';
 import { Role } from '../../../schemas/auth.schemas';
+import { envs } from '../../../config/env';
 
 // Mock das dependências
 jest.mock('../../../prisma/client', () => ({
@@ -16,6 +17,8 @@ jest.mock('../../../prisma/client', () => ({
       create: jest.fn(),
       findFirst: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
+      deleteMany: jest.fn(),
     },
   },
 }));
@@ -38,6 +41,8 @@ const mockUserUpdate = (mockPrisma as any).user.update;
 const mockPasswordResetCreate = (mockPrisma as any).passwordReset.create;
 const mockPasswordResetFindFirst = (mockPrisma as any).passwordReset.findFirst;
 const mockPasswordResetUpdate = (mockPrisma as any).passwordReset.update;
+const mockPasswordResetUpdateMany = (mockPrisma as any).passwordReset.updateMany;
+const mockPasswordResetDeleteMany = (mockPrisma as any).passwordReset.deleteMany;
 const mockJwt = jwt as jest.Mocked<typeof jwt>;
 const mockBcrypt = { compare, hash } as jest.Mocked<typeof import('bcryptjs')>;
 const mockCrypto = crypto as jest.Mocked<typeof crypto>;
@@ -105,7 +110,7 @@ describe('AuthService', () => {
           email: mockUser.email,
           role: mockUser.role
         },
-        process.env.JWT_SECRET || 'seu_segredo_super_secreto',
+        process.env.JWT_SECRET || 'your-secret-key-change-in-production',
         { expiresIn: '10d' }
       );
       expect(result).toEqual({
@@ -124,9 +129,12 @@ describe('AuthService', () => {
       const email = 'teste@exemplo.com';
       const senha = 'senha123';
       const originalJwtSecret = process.env.JWT_SECRET;
+      const originalEnvJwtSecret = envs.auth.jwtSecret;
 
       // Remove a variável de ambiente temporariamente
       delete process.env.JWT_SECRET;
+
+      envs.auth.jwtSecret = 'your-secret-key-change-in-production';
 
       mockUserFindUnique.mockResolvedValue(mockUser);
       (mockBcrypt.compare as jest.Mock).mockResolvedValue(true);
@@ -141,11 +149,14 @@ describe('AuthService', () => {
           email: mockUser.email,
           role: mockUser.role
         },
-        'seu_segredo_super_secreto',
+        'your-secret-key-change-in-production',
         { expiresIn: '10d' }
       );
 
       // Restaura a variável de ambiente
+      if (originalEnvJwtSecret) {
+        envs.auth.jwtSecret = originalEnvJwtSecret;
+      }
       if (originalJwtSecret) {
         process.env.JWT_SECRET = originalJwtSecret;
       }
@@ -243,6 +254,55 @@ describe('AuthService', () => {
 
       // Act & Assert
       await expect(authService.login(email, senha)).rejects.toThrow('Erro no processo de login');
+    });
+  });
+
+  describe('getUserById', () => {
+    const userId = 'user-123';
+
+    test('deve retornar usuário quando encontrado', async () => {
+      const usuario = {
+        id: userId,
+        name: 'Usuário Teste',
+        email: 'teste@email.com',
+        role: Role.FREE,
+        createdAt: new Date()
+      };
+
+      mockUserFindUnique.mockResolvedValue(usuario);
+
+      const resultado = await authService.getUserById(userId);
+
+      expect(mockUserFindUnique).toHaveBeenCalledWith({
+        where: { id: userId },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          createdAt: true
+        }
+      });
+      expect(resultado).toEqual(usuario);
+    });
+
+    test('deve lançar erro quando usuário não é encontrado', async () => {
+      mockUserFindUnique.mockResolvedValue(null);
+
+      await expect(authService.getUserById(userId)).rejects.toThrow('Usuário não encontrado');
+    });
+
+    test('deve propagar erros do tipo Error', async () => {
+      const erro = new Error('Falha de banco de dados');
+      mockUserFindUnique.mockRejectedValue(erro);
+
+      await expect(authService.getUserById(userId)).rejects.toThrow('Falha de banco de dados');
+    });
+
+    test('deve lançar erro genérico para erros desconhecidos', async () => {
+      mockUserFindUnique.mockRejectedValue('erro bruto');
+
+      await expect(authService.getUserById(userId)).rejects.toThrow('Erro ao buscar dados do usuário');
     });
   });
 
@@ -542,6 +602,8 @@ describe('AuthService', () => {
       const hexToken = Buffer.from(mockToken).toString('hex');
 
       mockUserFindUnique.mockResolvedValue(mockUser);
+      mockPasswordResetUpdateMany.mockResolvedValue({ count: 0 });
+      mockPasswordResetDeleteMany.mockResolvedValue({ count: 0 });
       mockPasswordResetCreate.mockResolvedValue({
         id: mockUUID,
         email: mockUser.email,
@@ -560,6 +622,16 @@ describe('AuthService', () => {
 
       // Assert
       expect(mockUserFindUnique).toHaveBeenCalledWith({ where: { email } });
+      expect(mockPasswordResetUpdateMany).toHaveBeenCalledWith({
+        where: {
+          email: mockUser.email,
+          used: false
+        },
+        data: {
+          used: true
+        }
+      });
+      expect(mockPasswordResetDeleteMany).toHaveBeenCalled();
       expect(mockCrypto.randomBytes).toHaveBeenCalledWith(32);
       expect(mockCrypto.randomUUID).toHaveBeenCalled();
       expect(mockPasswordResetCreate).toHaveBeenCalledWith({
@@ -606,6 +678,8 @@ describe('AuthService', () => {
       const email = 'teste@exemplo.com';
 
       mockUserFindUnique.mockResolvedValue(mockUser);
+      mockPasswordResetUpdateMany.mockResolvedValue({ count: 0 });
+      mockPasswordResetDeleteMany.mockResolvedValue({ count: 0 });
       mockPasswordResetCreate.mockResolvedValue({
         id: mockUUID,
         email: mockUser.email,
@@ -646,6 +720,8 @@ describe('AuthService', () => {
       const email = 'teste@exemplo.com';
 
       mockUserFindUnique.mockResolvedValue(mockUser);
+      mockPasswordResetUpdateMany.mockResolvedValue({ count: 0 });
+      mockPasswordResetDeleteMany.mockResolvedValue({ count: 0 });
       mockPasswordResetCreate.mockRejectedValue(new Error('Erro de criação'));
 
       // Act & Assert
@@ -657,7 +733,7 @@ describe('AuthService', () => {
       const email = 'teste@exemplo.com';
 
       mockUserFindUnique.mockResolvedValue(mockUser);
-      mockPasswordResetCreate.mockRejectedValue('String error');
+      mockPasswordResetUpdateMany.mockRejectedValue('String error');
 
       // Act & Assert
       await expect(authService.forgotPassword(email)).rejects.toThrow('Erro ao processar solicitação de recuperação');
@@ -684,6 +760,8 @@ describe('AuthService', () => {
       const novaSenha = 'novaSenha123';
 
       mockPasswordResetFindFirst.mockResolvedValue(mockPasswordReset);
+      mockPasswordResetUpdate.mockResolvedValue({ ...mockPasswordReset, used: true });
+      mockPasswordResetDeleteMany.mockResolvedValue({ count: 0 });
       mockUserUpdate.mockResolvedValue({
         id: 'c123456789012345678901234',
         email: 'teste@exemplo.com',
@@ -701,11 +779,7 @@ describe('AuthService', () => {
       // Assert
       expect(mockPasswordResetFindFirst).toHaveBeenCalledWith({
         where: {
-          token,
-          used: false,
-          expiresAt: {
-            gt: expect.any(Date)
-          }
+          token
         }
       });
       expect(mockBcrypt.hash).toHaveBeenCalledWith(novaSenha, 8);
@@ -733,19 +807,54 @@ describe('AuthService', () => {
       mockPasswordResetFindFirst.mockResolvedValue(null);
 
       // Act & Assert
-      await expect(authService.resetPassword(token, novaSenha)).rejects.toThrow('Token inválido ou expirado');
+      await expect(authService.resetPassword(token, novaSenha)).rejects.toThrow('TOKEN_INVALIDO');
       expect(mockPasswordResetFindFirst).toHaveBeenCalledWith({
         where: {
-          token,
-          used: false,
-          expiresAt: {
-            gt: expect.any(Date)
-          }
+          token
         }
       });
       expect(mockBcrypt.hash).not.toHaveBeenCalled();
       expect(mockUserUpdate).not.toHaveBeenCalled();
       expect(mockPasswordResetUpdate).not.toHaveBeenCalled();
+    });
+
+    test('deve lançar erro quando token já foi usado', async () => {
+      // Arrange
+      const token = 'used-token';
+      const novaSenha = 'novaSenha123';
+      const usedPasswordReset = {
+        ...mockPasswordReset,
+        used: true
+      };
+
+      mockPasswordResetFindFirst.mockResolvedValue(usedPasswordReset);
+
+      // Act & Assert
+      await expect(authService.resetPassword(token, novaSenha)).rejects.toThrow('TOKEN_JA_USADO');
+      expect(mockBcrypt.hash).not.toHaveBeenCalled();
+      expect(mockUserUpdate).not.toHaveBeenCalled();
+    });
+
+    test('deve lançar erro quando token expirou', async () => {
+      // Arrange
+      const token = 'expired-token';
+      const novaSenha = 'novaSenha123';
+      const expiredPasswordReset = {
+        ...mockPasswordReset,
+        expiresAt: new Date(Date.now() - 3600000) // 1 hora no passado
+      };
+
+      mockPasswordResetFindFirst.mockResolvedValue(expiredPasswordReset);
+      mockPasswordResetUpdate.mockResolvedValue({ ...expiredPasswordReset, used: true });
+
+      // Act & Assert
+      await expect(authService.resetPassword(token, novaSenha)).rejects.toThrow('TOKEN_EXPIRADO');
+      expect(mockPasswordResetUpdate).toHaveBeenCalledWith({
+        where: { id: expiredPasswordReset.id },
+        data: { used: true }
+      });
+      expect(mockBcrypt.hash).not.toHaveBeenCalled();
+      expect(mockUserUpdate).not.toHaveBeenCalled();
     });
 
     test('deve lançar erro quando bcrypt.hash falha', async () => {

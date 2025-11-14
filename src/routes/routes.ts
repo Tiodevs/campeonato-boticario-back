@@ -1,14 +1,15 @@
 import { Router, Request, Response } from "express";
 
 // Rotas
-import phrasesRoutes from "./phrases.routes";
 import authRoutes from "./auth.routes";
 
 const router = Router();
 
 // Registrar as rotas individuais
-router.use('/phrases', phrasesRoutes);
 router.use('/auth', authRoutes);
+
+// Rota para criação de tarefas
+// router.use('/tasks', taskRoutes);
 
 // Rota de health check
 router.get('/health', (req: Request, res: Response) => {

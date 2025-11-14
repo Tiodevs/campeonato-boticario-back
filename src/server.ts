@@ -7,9 +7,9 @@ const PORT = envs.server.port;
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
     console.log(`🚀 Servidor Express rodando na porta ${PORT}`);
-    console.log(`📝 Aspas Note Backend - Pronto para salvar frases famosas!`);
+    console.log(`📝 Foco Total Backend - Pronto para salvar frases famosas!`);
     console.log(`🌐 Acesse: http://localhost:${PORT}`);
-    console.log(`📚 Documentação: http://localhost:${PORT}/health`);
+    console.log(`📚 Documentação: http://localhost:${PORT}/docs`);
   });
 }
 

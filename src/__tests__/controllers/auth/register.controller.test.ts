@@ -40,7 +40,7 @@ describe('RegisterController', () => {
       body: {
         nome: 'Usuário Teste',
         email: 'teste@email.com',
-        senha: 'senha123',
+        senha: 'Senha123',
         role: 'USER'
       }
     };
@@ -63,7 +63,7 @@ describe('RegisterController', () => {
       message: 'Usuário criado com sucesso',
       user: usuarioCriado
     });
-    expect(mockCreateUser).toHaveBeenCalledWith('Usuário Teste', 'teste@email.com', 'senha123', 'USER');
+    expect(mockCreateUser).toHaveBeenCalledWith('Usuário Teste', 'teste@email.com', 'Senha123', 'USER');
   });
 
   test('deve retornar 409 quando email já está em uso', async () => {
@@ -71,7 +71,7 @@ describe('RegisterController', () => {
       body: {
         nome: 'Usuário Teste',
         email: 'email-existente@email.com',
-        senha: 'senha123',
+        senha: 'Senha123',
         role: 'USER'
       }
     };
@@ -92,7 +92,7 @@ describe('RegisterController', () => {
       body: {
         nome: 'Nome Existente',
         email: 'teste@email.com',
-        senha: 'senha123',
+        senha: 'Senha123',
         role: 'USER'
       }
     };
@@ -113,7 +113,7 @@ describe('RegisterController', () => {
       body: {
         nome: 'Usuário Teste',
         email: 'teste@email.com',
-        senha: 'senha123',
+        senha: 'Senha123',
         role: 'USER'
       }
     };

@@ -1,16 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
-import { z, ZodError } from 'zod';
+import { z, ZodError, ZodIssue } from 'zod';
 
 // Middleware de validação para req.body
-export const validate = (schema: z.ZodSchema<any>) => {
+export const validate = <T extends z.ZodTypeAny>(schema: T) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
       // Valida e transforma os dados
-      req.body = schema.parse(req.body);
+      req.body = schema.parse(req.body) as z.infer<T>;
       next();
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof ZodError) {
-        const errors = error.issues.map((err: any) => ({
+        const errors = error.issues.map((err: ZodIssue) => ({
           field: err.path.join('.'),
           message: err.message
         }));
@@ -33,15 +33,16 @@ export const validate = (schema: z.ZodSchema<any>) => {
 };
 
 // Middleware de validação para req.params
-export const validateParams = (schema: z.ZodSchema<any>) => {
+export const validateParams = <T extends z.ZodTypeAny>(schema: T) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
       // Valida e transforma os parâmetros
-      req.params = schema.parse(req.params);
+      const parsed = schema.parse(req.params) as z.infer<T>;
+      req.params = parsed as typeof req.params;
       next();
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof ZodError) {
-        const errors = error.issues.map((err: any) => ({
+        const errors = error.issues.map((err: ZodIssue) => ({
           field: err.path.join('.'),
           message: err.message
         }));
@@ -64,15 +65,16 @@ export const validateParams = (schema: z.ZodSchema<any>) => {
 };
 
 // Middleware de validação para req.query
-export const validateQuery = (schema: z.ZodSchema<any>) => {
+export const validateQuery = <T extends z.ZodTypeAny>(schema: T) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
       // Valida e transforma os query parameters
-      req.query = schema.parse(req.query);
+      const parsed = schema.parse(req.query) as z.infer<T>;
+      req.query = parsed as typeof req.query;
       next();
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof ZodError) {
-        const errors = error.issues.map((err: any) => ({
+        const errors = error.issues.map((err: ZodIssue) => ({
           field: err.path.join('.'),
           message: err.message
         }));

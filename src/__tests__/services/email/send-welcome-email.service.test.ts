@@ -1,40 +1,40 @@
 import { EmailService } from '../../../services/email/email.service';
 
-// Mock do Nodemailer
-jest.mock('nodemailer', () => ({
-  createTransport: jest.fn().mockReturnValue({
-    sendMail: jest.fn()
-  })
+const mockSendEmail = jest.fn();
+
+jest.mock('resend', () => ({
+  Resend: jest.fn().mockImplementation(() => ({
+    emails: {
+      send: mockSendEmail
+    }
+  }))
 }));
 
-// Mock das configurações de ambiente
 jest.mock('../../../config/env', () => ({
   envs: {
-    email: {
-      sender: 'test@aspasnote.com',
-      user: 'test@aspasnote.com',
-      password: 'test-password'
+    server: {
+      port: 4000,
+      host: 'http://localhost:3000'
+    },
+    auth: {
+      jwtSecret: 'your-secret-key-change-in-production'
+    },
+    database: {
+      url: 'test-database-url'
+    },
+    resend: {
+      apiKey: 'test-api-key',
+      sender: 'test@aspasnote.com'
     }
   }
 }));
 
-import * as nodemailer from 'nodemailer';
-const mockSendMail = jest.fn();
-
 describe('SendWelcomeEmailService', () => {
   let emailService: EmailService;
-  let mockTransporter: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
-    // Configurar o mock do transporter
-    mockTransporter = {
-      sendMail: mockSendMail
-    };
-    
-    (nodemailer.createTransport as jest.Mock).mockReturnValue(mockTransporter);
-    
+
     emailService = new EmailService();
   });
 
@@ -47,7 +47,7 @@ describe('SendWelcomeEmailService', () => {
   });
 
   test('deve enviar email de boas-vindas com sucesso', async () => {
-    mockSendMail.mockResolvedValue({ messageId: 'test-message-id' });
+    mockSendEmail.mockResolvedValue({ data: { id: 'test-message-id' } });
 
     const resultado = await emailService.enviarEmailBoasVindas('João Silva', 'joao@email.com');
 
@@ -56,19 +56,21 @@ describe('SendWelcomeEmailService', () => {
       message: 'Email de boas-vindas enviado com sucesso'
     });
 
-    expect(mockSendMail).toHaveBeenCalledWith({
-      from: 'Aspas Note <test@aspasnote.com>',
-      to: 'joao@email.com',
-      subject: 'Bem-vindo à Aspas Note!',
-      html: expect.stringContaining('João Silva')
-    });
+    expect(mockSendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        from: 'Foco Total <test@aspasnote.com>',
+        to: 'joao@email.com',
+        subject: 'Bem-vindo à Foco Total!',
+        html: expect.stringContaining('João Silva')
+      })
+    );
 
-    expect(mockSendMail).toHaveBeenCalledTimes(1);
+    expect(mockSendEmail).toHaveBeenCalledTimes(1);
   });
 
   test('deve falhar quando o envio de email retorna erro', async () => {
     const erroSimulado = new Error('Erro de conexão SMTP');
-    mockSendMail.mockRejectedValue(erroSimulado);
+    mockSendEmail.mockRejectedValue(erroSimulado);
 
     const resultado = await emailService.enviarEmailBoasVindas('João Silva', 'joao@email.com');
 
@@ -79,12 +81,12 @@ describe('SendWelcomeEmailService', () => {
   });
 
   test('deve lidar com nomes com caracteres especiais', async () => {
-    mockSendMail.mockResolvedValue({ messageId: 'test-message-id' });
+    mockSendEmail.mockResolvedValue({ data: { id: 'test-message-id' } });
 
     const resultado = await emailService.enviarEmailBoasVindas('José Antônio da Côrte', 'jose@email.com');
 
     expect(resultado.success).toBe(true);
-    expect(mockSendMail).toHaveBeenCalledWith(
+    expect(mockSendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         html: expect.stringContaining('José Antônio da Côrte')
       })
@@ -92,12 +94,12 @@ describe('SendWelcomeEmailService', () => {
   });
 
   test('deve lidar com emails com caracteres especiais', async () => {
-    mockSendMail.mockResolvedValue({ messageId: 'test-message-id' });
+    mockSendEmail.mockResolvedValue({ data: { id: 'test-message-id' } });
 
     const resultado = await emailService.enviarEmailBoasVindas('Usuário', 'usuario+teste@email.com');
 
     expect(resultado.success).toBe(true);
-    expect(mockSendMail).toHaveBeenCalledWith(
+    expect(mockSendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         to: 'usuario+teste@email.com'
       })
@@ -105,37 +107,25 @@ describe('SendWelcomeEmailService', () => {
   });
 
   test('deve incluir template HTML correto', async () => {
-    mockSendMail.mockResolvedValue({ messageId: 'test-message-id' });
+    mockSendEmail.mockResolvedValue({ data: { id: 'test-message-id' } });
 
     await emailService.enviarEmailBoasVindas('Teste', 'teste@email.com');
 
-    const callArgs = mockSendMail.mock.calls[0][0];
+    const callArgs = mockSendEmail.mock.calls[0][0];
     
-    expect(callArgs.html).toContain('Bem-vindo à Aspas Note!');
+    expect(callArgs.html).toContain('Bem-vindo à Foco Total!');
     expect(callArgs.html).toContain('Teste');
     expect(callArgs.html).toContain('font-family: Arial, sans-serif');
     expect(callArgs.html).toContain('max-width: 600px');
   });
 
-  test('deve configurar o transporter corretamente', () => {
-    expect(nodemailer.createTransport).toHaveBeenCalledWith({
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
-      auth: {
-        user: 'test@aspasnote.com',
-        pass: 'test-password'
-      }
-    });
-  });
-
   test('deve lidar com nome vazio', async () => {
-    mockSendMail.mockResolvedValue({ messageId: 'test-message-id' });
+    mockSendEmail.mockResolvedValue({ data: { id: 'test-message-id' } });
 
     const resultado = await emailService.enviarEmailBoasVindas('', 'teste@email.com');
 
     expect(resultado.success).toBe(true);
-    expect(mockSendMail).toHaveBeenCalledWith(
+    expect(mockSendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         html: expect.stringContaining('Olá ,')
       })
@@ -143,7 +133,7 @@ describe('SendWelcomeEmailService', () => {
   });
 
   test('deve lidar com email inválido', async () => {
-    mockSendMail.mockRejectedValue(new Error('Invalid email address'));
+    mockSendEmail.mockRejectedValue(new Error('Invalid email address'));
 
     const resultado = await emailService.enviarEmailBoasVindas('Teste', 'email-invalido');
 

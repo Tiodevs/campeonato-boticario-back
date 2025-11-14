@@ -28,7 +28,10 @@ export const loginSchema = z.object({
   senha: z
     .string()
     .min(1, 'Senha é obrigatória')
-    .min(6, 'Senha deve ter pelo menos 6 caracteres')
+    .min(8, 'Senha deve ter pelo menos 8 caracteres')
+    .regex(/[A-Z]/, 'Senha deve conter pelo menos uma letra maiúscula')
+    .regex(/[a-z]/, 'Senha deve conter pelo menos uma letra minúscula')
+    .regex(/[0-9]/, 'Senha deve conter pelo menos um número'),
 });
 
 // Schema para registro
@@ -47,8 +50,11 @@ export const registerSchema = z.object({
   senha: z
     .string()
     .min(1, 'Senha é obrigatória')
-    .min(6, 'Senha deve ter pelo menos 6 caracteres')
-    .max(100, 'Senha deve ter no máximo 100 caracteres'),
+    .min(8, 'Senha deve ter pelo menos 8 caracteres')
+    .max(100, 'Senha deve ter no máximo 100 caracteres')
+    .regex(/[A-Z]/, 'Senha deve conter pelo menos uma letra maiúscula')
+    .regex(/[a-z]/, 'Senha deve conter pelo menos uma letra minúscula')
+    .regex(/[0-9]/, 'Senha deve conter pelo menos um número'),
   role: z
     .enum([Role.ADMIN, Role.FREE, Role.PRO])
     .optional()
@@ -72,31 +78,11 @@ export const resetPasswordSchema = z.object({
   novaSenha: z
     .string()
     .min(1, 'Nova senha é obrigatória')
-    .min(6, 'Nova senha deve ter pelo menos 6 caracteres')
+    .min(8, 'Nova senha deve ter pelo menos 8 caracteres')
     .max(100, 'Nova senha deve ter no máximo 100 caracteres')
-});
-
-// Schema para OAuth signin
-export const oauthSigninSchema = z.object({
-  email: z
-    .string()
-    .min(1, 'Email é obrigatório')
-    .email('Email inválido')
-    .toLowerCase(),
-  name: z
-    .string()
-    .min(1, 'Nome é obrigatório')
-    .trim(),
-  image: z
-    .string()
-    .url('URL da imagem inválida')
-    .optional(),
-  provider: z
-    .string()
-    .min(1, 'Provider é obrigatório'),
-  providerId: z
-    .string()
-    .min(1, 'Provider ID é obrigatório')
+    .regex(/[A-Z]/, 'Nova senha deve conter pelo menos uma letra maiúscula')
+    .regex(/[a-z]/, 'Nova senha deve conter pelo menos uma letra minúscula')
+    .regex(/[0-9]/, 'Nova senha deve conter pelo menos um número')
 });
 
 // Tipos TypeScript derivados dos schemas
@@ -105,4 +91,3 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
-export type OAuthSigninInput = z.infer<typeof oauthSigninSchema>; 

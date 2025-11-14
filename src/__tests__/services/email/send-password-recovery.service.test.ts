@@ -1,40 +1,40 @@
 import { EmailService } from '../../../services/email/email.service';
 
-// Mock do Nodemailer
-jest.mock('nodemailer', () => ({
-  createTransport: jest.fn().mockReturnValue({
-    sendMail: jest.fn()
-  })
+const mockSendEmail = jest.fn();
+
+jest.mock('resend', () => ({
+  Resend: jest.fn().mockImplementation(() => ({
+    emails: {
+      send: mockSendEmail
+    }
+  }))
 }));
 
-// Mock das configurações de ambiente
 jest.mock('../../../config/env', () => ({
   envs: {
-    email: {
-      sender: 'test@aspasnote.com',
-      user: 'test@aspasnote.com',
-      password: 'test-password'
+    server: {
+      port: 4000,
+      host: 'http://localhost:3000'
+    },
+    auth: {
+      jwtSecret: 'your-secret-key-change-in-production'
+    },
+    database: {
+      url: 'test-database-url'
+    },
+    resend: {
+      apiKey: 'test-api-key',
+      sender: 'test@aspasnote.com'
     }
   }
 }));
 
-import * as nodemailer from 'nodemailer';
-const mockSendMail = jest.fn();
-
 describe('SendPasswordRecoveryService', () => {
   let emailService: EmailService;
-  let mockTransporter: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
-    // Configurar o mock do transporter
-    mockTransporter = {
-      sendMail: mockSendMail
-    };
-    
-    (nodemailer.createTransport as jest.Mock).mockReturnValue(mockTransporter);
-    
+
     emailService = new EmailService();
   });
 
@@ -43,7 +43,7 @@ describe('SendPasswordRecoveryService', () => {
   });
 
   test('deve enviar email de recuperação de senha com sucesso', async () => {
-    mockSendMail.mockResolvedValue({ messageId: 'test-message-id' });
+    mockSendEmail.mockResolvedValue({ data: { id: 'test-message-id' } });
 
     const resultado = await emailService.enviarEmailRecuperacaoSenha(
       'João Silva',
@@ -56,19 +56,21 @@ describe('SendPasswordRecoveryService', () => {
       message: 'Email de recuperação enviado com sucesso'
     });
 
-    expect(mockSendMail).toHaveBeenCalledWith({
-      from: 'Aspas Note <test@aspasnote.com>',
-      to: 'joao@email.com',
-      subject: 'Recuperação de Senha - Aspas Note',
-      html: expect.stringContaining('João Silva')
-    });
+    expect(mockSendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        from: 'Foco Total <test@aspasnote.com>',
+        to: 'joao@email.com',
+        subject: 'Recuperação de Senha - Foco Total',
+        html: expect.stringContaining('João Silva')
+      })
+    );
 
-    expect(mockSendMail).toHaveBeenCalledTimes(1);
+    expect(mockSendEmail).toHaveBeenCalledTimes(1);
   });
 
   test('deve falhar quando o envio de email retorna erro', async () => {
     const erroSimulado = new Error('Erro de conexão SMTP');
-    mockSendMail.mockRejectedValue(erroSimulado);
+    mockSendEmail.mockRejectedValue(erroSimulado);
 
     const resultado = await emailService.enviarEmailRecuperacaoSenha(
       'João Silva',
@@ -83,7 +85,7 @@ describe('SendPasswordRecoveryService', () => {
   });
 
   test('deve incluir link de recuperação no template HTML', async () => {
-    mockSendMail.mockResolvedValue({ messageId: 'test-message-id' });
+    mockSendEmail.mockResolvedValue({ data: { id: 'test-message-id' } });
 
     const resetLink = 'https://aspasnote.com/reset-password?token=abc123';
     
@@ -93,7 +95,7 @@ describe('SendPasswordRecoveryService', () => {
       resetLink
     );
 
-    const callArgs = mockSendMail.mock.calls[0][0];
+    const callArgs = mockSendEmail.mock.calls[0][0];
     
     expect(callArgs.html).toContain(resetLink);
     expect(callArgs.html).toContain('Redefinir Senha');
@@ -101,7 +103,7 @@ describe('SendPasswordRecoveryService', () => {
   });
 
   test('deve incluir informações de segurança no template', async () => {
-    mockSendMail.mockResolvedValue({ messageId: 'test-message-id' });
+    mockSendEmail.mockResolvedValue({ data: { id: 'test-message-id' } });
 
     await emailService.enviarEmailRecuperacaoSenha(
       'Teste',
@@ -109,15 +111,15 @@ describe('SendPasswordRecoveryService', () => {
       'https://aspasnote.com/reset-password?token=abc123'
     );
 
-    const callArgs = mockSendMail.mock.calls[0][0];
+    const callArgs = mockSendEmail.mock.calls[0][0];
     
     expect(callArgs.html).toContain('Se você não solicitou esta alteração');
     expect(callArgs.html).toContain('O link é válido por 1 hora');
-    expect(callArgs.html).toContain('Equipe Aspas Note');
+    expect(callArgs.html).toContain('Equipe Foco Total');
   });
 
   test('deve lidar com nomes com caracteres especiais', async () => {
-    mockSendMail.mockResolvedValue({ messageId: 'test-message-id' });
+    mockSendEmail.mockResolvedValue({ data: { id: 'test-message-id' } });
 
     const resultado = await emailService.enviarEmailRecuperacaoSenha(
       'José Antônio da Côrte',
@@ -126,7 +128,7 @@ describe('SendPasswordRecoveryService', () => {
     );
 
     expect(resultado.success).toBe(true);
-    expect(mockSendMail).toHaveBeenCalledWith(
+    expect(mockSendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         html: expect.stringContaining('José Antônio da Côrte')
       })
@@ -134,7 +136,7 @@ describe('SendPasswordRecoveryService', () => {
   });
 
   test('deve lidar com links de recuperação complexos', async () => {
-    mockSendMail.mockResolvedValue({ messageId: 'test-message-id' });
+    mockSendEmail.mockResolvedValue({ data: { id: 'test-message-id' } });
 
     const linkComplexo = 'https://aspasnote.com/reset-password?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMjMiLCJpYXQiOjE2MzQ1Njc4OTAsImV4cCI6MTYzNDU3MTQ5MH0.signature';
     
@@ -144,12 +146,12 @@ describe('SendPasswordRecoveryService', () => {
       linkComplexo
     );
 
-    const callArgs = mockSendMail.mock.calls[0][0];
+    const callArgs = mockSendEmail.mock.calls[0][0];
     expect(callArgs.html).toContain(linkComplexo);
   });
 
   test('deve lidar com emails com caracteres especiais', async () => {
-    mockSendMail.mockResolvedValue({ messageId: 'test-message-id' });
+    mockSendEmail.mockResolvedValue({ data: { id: 'test-message-id' } });
 
     const resultado = await emailService.enviarEmailRecuperacaoSenha(
       'Usuário',
@@ -158,7 +160,7 @@ describe('SendPasswordRecoveryService', () => {
     );
 
     expect(resultado.success).toBe(true);
-    expect(mockSendMail).toHaveBeenCalledWith(
+    expect(mockSendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         to: 'usuario+teste@email.com'
       })
@@ -166,7 +168,7 @@ describe('SendPasswordRecoveryService', () => {
   });
 
   test('deve incluir botão de ação no template', async () => {
-    mockSendMail.mockResolvedValue({ messageId: 'test-message-id' });
+    mockSendEmail.mockResolvedValue({ data: { id: 'test-message-id' } });
 
     await emailService.enviarEmailRecuperacaoSenha(
       'Teste',
@@ -174,7 +176,7 @@ describe('SendPasswordRecoveryService', () => {
       'https://aspasnote.com/reset-password?token=abc123'
     );
 
-    const callArgs = mockSendMail.mock.calls[0][0];
+    const callArgs = mockSendEmail.mock.calls[0][0];
     
     expect(callArgs.html).toContain('background-color: #4CAF50');
     expect(callArgs.html).toContain('color: white');
@@ -183,7 +185,7 @@ describe('SendPasswordRecoveryService', () => {
   });
 
   test('deve lidar com nome vazio', async () => {
-    mockSendMail.mockResolvedValue({ messageId: 'test-message-id' });
+    mockSendEmail.mockResolvedValue({ data: { id: 'test-message-id' } });
 
     const resultado = await emailService.enviarEmailRecuperacaoSenha(
       '',
@@ -192,7 +194,7 @@ describe('SendPasswordRecoveryService', () => {
     );
 
     expect(resultado.success).toBe(true);
-    expect(mockSendMail).toHaveBeenCalledWith(
+    expect(mockSendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         html: expect.stringContaining('Olá ,')
       })
@@ -200,7 +202,7 @@ describe('SendPasswordRecoveryService', () => {
   });
 
   test('deve lidar com link de recuperação vazio', async () => {
-    mockSendMail.mockResolvedValue({ messageId: 'test-message-id' });
+    mockSendEmail.mockResolvedValue({ data: { id: 'test-message-id' } });
 
     const resultado = await emailService.enviarEmailRecuperacaoSenha(
       'Teste',
@@ -209,7 +211,7 @@ describe('SendPasswordRecoveryService', () => {
     );
 
     expect(resultado.success).toBe(true);
-    expect(mockSendMail).toHaveBeenCalledWith(
+    expect(mockSendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         html: expect.stringContaining('href=""')
       })
@@ -217,7 +219,7 @@ describe('SendPasswordRecoveryService', () => {
   });
 
   test('deve incluir estrutura HTML correta', async () => {
-    mockSendMail.mockResolvedValue({ messageId: 'test-message-id' });
+    mockSendEmail.mockResolvedValue({ data: { id: 'test-message-id' } });
 
     await emailService.enviarEmailRecuperacaoSenha(
       'Teste',
@@ -225,7 +227,7 @@ describe('SendPasswordRecoveryService', () => {
       'https://aspasnote.com/reset-password?token=abc123'
     );
 
-    const callArgs = mockSendMail.mock.calls[0][0];
+    const callArgs = mockSendEmail.mock.calls[0][0];
     
     expect(callArgs.html).toContain('font-family: Arial, sans-serif');
     expect(callArgs.html).toContain('max-width: 600px');
@@ -234,7 +236,7 @@ describe('SendPasswordRecoveryService', () => {
   });
 
   test('deve lidar com email inválido', async () => {
-    mockSendMail.mockRejectedValue(new Error('Invalid email address'));
+    mockSendEmail.mockRejectedValue(new Error('Invalid email address'));
 
     const resultado = await emailService.enviarEmailRecuperacaoSenha(
       'Teste',

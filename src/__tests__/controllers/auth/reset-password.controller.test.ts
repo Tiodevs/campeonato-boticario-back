@@ -39,7 +39,7 @@ describe('ResetPasswordController', () => {
     mockReq = {
       body: {
         token: 'token-valido-123',
-        novaSenha: 'nova-senha123'
+        novaSenha: 'NovaSenha123'
       }
     };
 
@@ -53,25 +53,63 @@ describe('ResetPasswordController', () => {
     await authController.resetPassword(mockReq as Request, mockRes as Response);
 
     expect(mockJson).toHaveBeenCalledWith(resultado);
-    expect(mockResetPassword).toHaveBeenCalledWith('token-valido-123', 'nova-senha123');
+    expect(mockResetPassword).toHaveBeenCalledWith('token-valido-123', 'NovaSenha123');
   });
 
-  test('deve retornar 400 quando token é inválido ou expirado', async () => {
+  test('deve retornar 400 quando token é inválido', async () => {
     mockReq = {
       body: {
         token: 'token-invalido',
-        novaSenha: 'nova-senha123'
+        novaSenha: 'NovaSenha123'
       }
     };
 
-    mockResetPassword.mockRejectedValue(new Error('Token inválido ou expirado'));
+    mockResetPassword.mockRejectedValue(new Error('TOKEN_INVALIDO'));
 
     await authController.resetPassword(mockReq as Request, mockRes as Response);
 
     expect(mockStatus).toHaveBeenCalledWith(400);
     expect(mockJson).toHaveBeenCalledWith({
-      error: 'Token inválido ou expirado',
+      error: 'Token inválido',
       code: 'INVALID_TOKEN'
+    });
+  });
+
+  test('deve retornar 400 quando token já foi usado', async () => {
+    mockReq = {
+      body: {
+        token: 'token-usado',
+        novaSenha: 'NovaSenha123'
+      }
+    };
+
+    mockResetPassword.mockRejectedValue(new Error('TOKEN_JA_USADO'));
+
+    await authController.resetPassword(mockReq as Request, mockRes as Response);
+
+    expect(mockStatus).toHaveBeenCalledWith(400);
+    expect(mockJson).toHaveBeenCalledWith({
+      error: 'Este token já foi utilizado. Por favor, solicite um novo token de recuperação.',
+      code: 'TOKEN_ALREADY_USED'
+    });
+  });
+
+  test('deve retornar 400 quando token expirou', async () => {
+    mockReq = {
+      body: {
+        token: 'token-expirado',
+        novaSenha: 'NovaSenha123'
+      }
+    };
+
+    mockResetPassword.mockRejectedValue(new Error('TOKEN_EXPIRADO'));
+
+    await authController.resetPassword(mockReq as Request, mockRes as Response);
+
+    expect(mockStatus).toHaveBeenCalledWith(400);
+    expect(mockJson).toHaveBeenCalledWith({
+      error: 'Este token expirou. Por favor, solicite um novo token de recuperação.',
+      code: 'TOKEN_EXPIRED'
     });
   });
 
@@ -79,7 +117,7 @@ describe('ResetPasswordController', () => {
     mockReq = {
       body: {
         token: 'token-valido-123',
-        novaSenha: 'nova-senha123'
+        novaSenha: 'NovaSenha123'
       }
     };
 
@@ -94,22 +132,4 @@ describe('ResetPasswordController', () => {
     });
   });
 
-  test('deve retornar 500 quando token não existe', async () => {
-    mockReq = {
-      body: {
-        token: 'token-inexistente',
-        novaSenha: 'nova-senha123'
-      }
-    };
-
-    mockResetPassword.mockRejectedValue(new Error('Token não encontrado'));
-
-    await authController.resetPassword(mockReq as Request, mockRes as Response);
-
-    expect(mockStatus).toHaveBeenCalledWith(500);
-    expect(mockJson).toHaveBeenCalledWith({
-      error: 'Erro interno do servidor',
-      code: 'INTERNAL_ERROR'
-    });
-  });
 }); 
