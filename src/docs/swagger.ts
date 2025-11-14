@@ -33,6 +33,14 @@ export const swaggerDocument: OpenAPIV3.Document = {
     {
       name: 'Auth',
       description: 'Endpoints de autenticação, cadastro e gerenciamento de credenciais'
+    },
+    {
+      name: 'Projects',
+      description: 'Endpoints para gerenciamento de projetos'
+    },
+    {
+      name: 'Tasks',
+      description: 'Endpoints para gerenciamento de tarefas'
     }
   ],
   components: {
@@ -316,6 +324,266 @@ export const swaggerDocument: OpenAPIV3.Document = {
           }
         },
         required: ['status']
+      } as OpenAPIV3.SchemaObject,
+      Project: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            format: 'uuid'
+          },
+          name: {
+            type: 'string',
+            example: 'Meu Projeto'
+          },
+          description: {
+            type: 'string',
+            nullable: true,
+            example: 'Descrição do projeto'
+          },
+          color: {
+            type: 'string',
+            nullable: true,
+            example: '#FF5733'
+          },
+          userId: {
+            type: 'string',
+            format: 'uuid'
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time'
+          },
+          updatedAt: {
+            type: 'string',
+            format: 'date-time'
+          },
+          _count: {
+            type: 'object',
+            properties: {
+              tasks: {
+                type: 'number'
+              }
+            }
+          }
+        },
+        required: ['id', 'name', 'userId', 'createdAt', 'updatedAt']
+      } as OpenAPIV3.SchemaObject,
+      CreateProjectRequest: {
+        type: 'object',
+        properties: {
+          name: {
+            type: 'string',
+            minLength: 2,
+            maxLength: 100,
+            example: 'Meu Projeto'
+          },
+          description: {
+            type: 'string',
+            maxLength: 500,
+            nullable: true,
+            example: 'Descrição do projeto'
+          },
+          color: {
+            type: 'string',
+            pattern: '^#[0-9A-F]{6}$',
+            nullable: true,
+            example: '#FF5733'
+          }
+        },
+        required: ['name']
+      } as OpenAPIV3.SchemaObject,
+      UpdateProjectRequest: {
+        type: 'object',
+        properties: {
+          name: {
+            type: 'string',
+            minLength: 2,
+            maxLength: 100,
+            example: 'Meu Projeto Atualizado'
+          },
+          description: {
+            type: 'string',
+            maxLength: 500,
+            nullable: true,
+            example: 'Nova descrição'
+          },
+          color: {
+            type: 'string',
+            pattern: '^#[0-9A-F]{6}$',
+            nullable: true,
+            example: '#33FF57'
+          }
+        }
+      } as OpenAPIV3.SchemaObject,
+      ProjectListResponse: {
+        type: 'object',
+        properties: {
+          projects: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/Project' }
+          },
+          pagination: {
+            type: 'object',
+            properties: {
+              page: { type: 'number' },
+              limit: { type: 'number' },
+              total: { type: 'number' },
+              totalPages: { type: 'number' },
+              hasNextPage: { type: 'boolean' },
+              hasPreviousPage: { type: 'boolean' }
+            }
+          }
+        },
+        required: ['projects', 'pagination']
+      } as OpenAPIV3.SchemaObject,
+      Task: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            format: 'uuid'
+          },
+          title: {
+            type: 'string',
+            example: 'Minha Tarefa'
+          },
+          description: {
+            type: 'string',
+            nullable: true,
+            example: 'Descrição da tarefa'
+          },
+          completed: {
+            type: 'boolean',
+            default: false
+          },
+          dueDate: {
+            type: 'string',
+            format: 'date-time',
+            nullable: true
+          },
+          priority: {
+            type: 'string',
+            enum: ['LOW', 'MEDIUM', 'HIGH'],
+            default: 'MEDIUM'
+          },
+          projectId: {
+            type: 'string',
+            format: 'uuid'
+          },
+          userId: {
+            type: 'string',
+            format: 'uuid'
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time'
+          },
+          updatedAt: {
+            type: 'string',
+            format: 'date-time'
+          },
+          project: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              name: { type: 'string' },
+              color: { type: 'string', nullable: true }
+            }
+          }
+        },
+        required: ['id', 'title', 'completed', 'projectId', 'userId', 'createdAt', 'updatedAt']
+      } as OpenAPIV3.SchemaObject,
+      CreateTaskRequest: {
+        type: 'object',
+        properties: {
+          title: {
+            type: 'string',
+            minLength: 2,
+            maxLength: 200,
+            example: 'Minha Tarefa'
+          },
+          description: {
+            type: 'string',
+            maxLength: 1000,
+            nullable: true,
+            example: 'Descrição da tarefa'
+          },
+          completed: {
+            type: 'boolean',
+            default: false
+          },
+          dueDate: {
+            type: 'string',
+            format: 'date-time',
+            nullable: true,
+            example: '2024-12-31T23:59:59Z'
+          },
+          priority: {
+            type: 'string',
+            enum: ['LOW', 'MEDIUM', 'HIGH'],
+            default: 'MEDIUM'
+          },
+          projectId: {
+            type: 'string',
+            format: 'uuid',
+            example: 'clx1234567890'
+          }
+        },
+        required: ['title', 'projectId']
+      } as OpenAPIV3.SchemaObject,
+      UpdateTaskRequest: {
+        type: 'object',
+        properties: {
+          title: {
+            type: 'string',
+            minLength: 2,
+            maxLength: 200,
+            example: 'Tarefa Atualizada'
+          },
+          description: {
+            type: 'string',
+            maxLength: 1000,
+            nullable: true
+          },
+          completed: {
+            type: 'boolean'
+          },
+          dueDate: {
+            type: 'string',
+            format: 'date-time',
+            nullable: true
+          },
+          priority: {
+            type: 'string',
+            enum: ['LOW', 'MEDIUM', 'HIGH']
+          },
+          projectId: {
+            type: 'string',
+            format: 'uuid'
+          }
+        }
+      } as OpenAPIV3.SchemaObject,
+      TaskListResponse: {
+        type: 'object',
+        properties: {
+          tasks: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/Task' }
+          },
+          pagination: {
+            type: 'object',
+            properties: {
+              page: { type: 'number' },
+              limit: { type: 'number' },
+              total: { type: 'number' },
+              totalPages: { type: 'number' },
+              hasNextPage: { type: 'boolean' },
+              hasPreviousPage: { type: 'boolean' }
+            }
+          }
+        },
+        required: ['tasks', 'pagination']
       } as OpenAPIV3.SchemaObject
     }
   },
@@ -695,6 +963,617 @@ export const swaggerDocument: OpenAPIV3.Document = {
                 schema: {
                   $ref: '#/components/schemas/ErrorResponse'
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/projects': {
+      post: {
+        tags: ['Projects'],
+        summary: 'Criar novo projeto',
+        description: 'Cria um novo projeto para o usuário autenticado.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/CreateProjectRequest' }
+            }
+          }
+        },
+        responses: {
+          201: {
+            description: 'Projeto criado com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string' },
+                    project: { $ref: '#/components/schemas/Project' }
+                  }
+                }
+              }
+            }
+          },
+          400: {
+            description: 'Dados inválidos',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ValidationErrorResponse' }
+              }
+            }
+          },
+          401: {
+            description: 'Token ausente ou inválido',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          },
+          500: {
+            description: 'Erro interno do servidor',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          }
+        }
+      },
+      get: {
+        tags: ['Projects'],
+        summary: 'Listar projetos',
+        description: 'Lista projetos do usuário autenticado com paginação, pesquisa e filtros.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'integer', default: 1, minimum: 1 }
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            schema: { type: 'integer', default: 10, minimum: 1, maximum: 100 }
+          },
+          {
+            name: 'search',
+            in: 'query',
+            schema: { type: 'string' },
+            description: 'Buscar por nome do projeto'
+          },
+          {
+            name: 'sortBy',
+            in: 'query',
+            schema: { type: 'string', enum: ['name', 'createdAt', 'updatedAt'], default: 'createdAt' }
+          },
+          {
+            name: 'sortOrder',
+            in: 'query',
+            schema: { type: 'string', enum: ['asc', 'desc'], default: 'desc' }
+          }
+        ],
+        responses: {
+          200: {
+            description: 'Lista de projetos retornada com sucesso',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ProjectListResponse' }
+              }
+            }
+          },
+          401: {
+            description: 'Token ausente ou inválido',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          },
+          500: {
+            description: 'Erro interno do servidor',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/projects/{id}': {
+      get: {
+        tags: ['Projects'],
+        summary: 'Obter projeto por ID',
+        description: 'Retorna os detalhes de um projeto específico.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' }
+          }
+        ],
+        responses: {
+          200: {
+            description: 'Projeto retornado com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    project: { $ref: '#/components/schemas/Project' }
+                  }
+                }
+              }
+            }
+          },
+          401: {
+            description: 'Token ausente ou inválido',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          },
+          404: {
+            description: 'Projeto não encontrado',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          },
+          500: {
+            description: 'Erro interno do servidor',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          }
+        }
+      },
+      put: {
+        tags: ['Projects'],
+        summary: 'Atualizar projeto',
+        description: 'Atualiza os dados de um projeto existente.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' }
+          }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/UpdateProjectRequest' }
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: 'Projeto atualizado com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string' },
+                    project: { $ref: '#/components/schemas/Project' }
+                  }
+                }
+              }
+            }
+          },
+          400: {
+            description: 'Dados inválidos',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ValidationErrorResponse' }
+              }
+            }
+          },
+          401: {
+            description: 'Token ausente ou inválido',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          },
+          404: {
+            description: 'Projeto não encontrado',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          },
+          500: {
+            description: 'Erro interno do servidor',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          }
+        }
+      },
+      delete: {
+        tags: ['Projects'],
+        summary: 'Deletar projeto',
+        description: 'Deleta um projeto e todas as suas tarefas associadas.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' }
+          }
+        ],
+        responses: {
+          200: {
+            description: 'Projeto deletado com sucesso',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/MessageResponse' }
+              }
+            }
+          },
+          401: {
+            description: 'Token ausente ou inválido',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          },
+          404: {
+            description: 'Projeto não encontrado',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          },
+          500: {
+            description: 'Erro interno do servidor',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/tasks': {
+      post: {
+        tags: ['Tasks'],
+        summary: 'Criar nova tarefa',
+        description: 'Cria uma nova tarefa associada a um projeto.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/CreateTaskRequest' }
+            }
+          }
+        },
+        responses: {
+          201: {
+            description: 'Tarefa criada com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string' },
+                    task: { $ref: '#/components/schemas/Task' }
+                  }
+                }
+              }
+            }
+          },
+          400: {
+            description: 'Dados inválidos',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ValidationErrorResponse' }
+              }
+            }
+          },
+          401: {
+            description: 'Token ausente ou inválido',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          },
+          404: {
+            description: 'Projeto não encontrado',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          },
+          500: {
+            description: 'Erro interno do servidor',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          }
+        }
+      },
+      get: {
+        tags: ['Tasks'],
+        summary: 'Listar tarefas',
+        description: 'Lista tarefas do usuário autenticado com paginação, pesquisa e filtros.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'integer', default: 1, minimum: 1 }
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            schema: { type: 'integer', default: 10, minimum: 1, maximum: 100 }
+          },
+          {
+            name: 'search',
+            in: 'query',
+            schema: { type: 'string' },
+            description: 'Buscar por título da tarefa'
+          },
+          {
+            name: 'completed',
+            in: 'query',
+            schema: { type: 'boolean' },
+            description: 'Filtrar por status de conclusão'
+          },
+          {
+            name: 'priority',
+            in: 'query',
+            schema: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH'] }
+          },
+          {
+            name: 'projectId',
+            in: 'query',
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Filtrar por projeto'
+          },
+          {
+            name: 'sortBy',
+            in: 'query',
+            schema: { type: 'string', enum: ['title', 'createdAt', 'updatedAt', 'dueDate', 'priority'], default: 'createdAt' }
+          },
+          {
+            name: 'sortOrder',
+            in: 'query',
+            schema: { type: 'string', enum: ['asc', 'desc'], default: 'desc' }
+          }
+        ],
+        responses: {
+          200: {
+            description: 'Lista de tarefas retornada com sucesso',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/TaskListResponse' }
+              }
+            }
+          },
+          401: {
+            description: 'Token ausente ou inválido',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          },
+          404: {
+            description: 'Projeto não encontrado (quando filtrado por projectId)',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          },
+          500: {
+            description: 'Erro interno do servidor',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/tasks/{id}': {
+      get: {
+        tags: ['Tasks'],
+        summary: 'Obter tarefa por ID',
+        description: 'Retorna os detalhes de uma tarefa específica.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' }
+          }
+        ],
+        responses: {
+          200: {
+            description: 'Tarefa retornada com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    task: { $ref: '#/components/schemas/Task' }
+                  }
+                }
+              }
+            }
+          },
+          401: {
+            description: 'Token ausente ou inválido',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          },
+          404: {
+            description: 'Tarefa não encontrada',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          },
+          500: {
+            description: 'Erro interno do servidor',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          }
+        }
+      },
+      put: {
+        tags: ['Tasks'],
+        summary: 'Atualizar tarefa',
+        description: 'Atualiza os dados de uma tarefa existente.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' }
+          }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/UpdateTaskRequest' }
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: 'Tarefa atualizada com sucesso',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string' },
+                    task: { $ref: '#/components/schemas/Task' }
+                  }
+                }
+              }
+            }
+          },
+          400: {
+            description: 'Dados inválidos',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ValidationErrorResponse' }
+              }
+            }
+          },
+          401: {
+            description: 'Token ausente ou inválido',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          },
+          404: {
+            description: 'Tarefa ou projeto não encontrado',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          },
+          500: {
+            description: 'Erro interno do servidor',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          }
+        }
+      },
+      delete: {
+        tags: ['Tasks'],
+        summary: 'Deletar tarefa',
+        description: 'Deleta uma tarefa específica.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' }
+          }
+        ],
+        responses: {
+          200: {
+            description: 'Tarefa deletada com sucesso',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/MessageResponse' }
+              }
+            }
+          },
+          401: {
+            description: 'Token ausente ou inválido',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          },
+          404: {
+            description: 'Tarefa não encontrada',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          },
+          500: {
+            description: 'Erro interno do servidor',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
               }
             }
           }
