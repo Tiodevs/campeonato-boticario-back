@@ -6,15 +6,6 @@ import { envs } from '../../config/env';
 import crypto from 'crypto';
 import { Role } from '../../schemas/auth.schemas';
 
-// Interface para o payload do token JWT
-interface JwtPayload {
-    userId: string;
-    email: string;
-    role: string;
-    iat?: number;
-    exp?: number;
-}
-
 export class AuthService {
 
     private emailService: EmailService;
@@ -50,7 +41,7 @@ export class AuthService {
                     email: usuario.email,
                     role: usuario.role
                 },
-                process.env.JWT_SECRET || 'seu_segredo_super_secreto',
+                envs.auth.jwtSecret,
                 { expiresIn: '10d' }
             );
 
@@ -142,6 +133,33 @@ export class AuthService {
         }
     }
 
+    // Limpar tokens expirados para um email específico (ou todos)
+    private async cleanupExpiredTokens(email?: string) {
+        try {
+            const whereClause = email
+                ? {
+                      email: email,
+                      OR: [
+                          { used: true },
+                          { expiresAt: { lt: new Date() } }
+                      ]
+                  }
+                : {
+                      OR: [
+                          { used: true },
+                          { expiresAt: { lt: new Date() } }
+                      ]
+                  };
+
+            await prisma.passwordReset.deleteMany({
+                where: whereClause
+            });
+        } catch (error) {
+            // Não falha o fluxo principal se a limpeza falhar
+            console.warn('Erro ao limpar tokens expirados:', error);
+        }
+    }
+
     // Solicitar recuperação de senha
     async forgotPassword(email: string) {
         try {
@@ -151,6 +169,21 @@ export class AuthService {
             if (!usuario) {
                 return { message: 'Se esse email estiver cadastrado, você receberá instruções.' };
             }
+
+            // Invalidar todos os tokens não usados anteriores para este email
+            await prisma.passwordReset.updateMany({
+                where: {
+                    email: usuario.email,
+                    used: false
+                },
+                data: {
+                    used: true
+                }
+            });
+
+            // Limpar tokens expirados deste email
+            await this.cleanupExpiredTokens(usuario.email);
+
             // Gerar token aleatório
             const token = crypto.randomBytes(32).toString('hex');
 
@@ -188,19 +221,30 @@ export class AuthService {
     // Redefinir senha com token
     async resetPassword(token: string, novaSenha: string) {
         try {
-
             const passwordReset = await prisma.passwordReset.findFirst({
                 where: {
-                    token: token,
-                    used: false,
-                    expiresAt: {
-                        gt: new Date()
-                    }
+                    token: token
                 }
             });
 
+            // Se o token não existe
             if (!passwordReset) {
-                throw new Error('Token inválido ou expirado');
+                throw new Error('TOKEN_INVALIDO');
+            }
+
+            // Se o token já foi usado
+            if (passwordReset.used) {
+                throw new Error('TOKEN_JA_USADO');
+            }
+
+            // Se o token expirou
+            if (passwordReset.expiresAt < new Date()) {
+                // Marcar como usado para evitar uso futuro
+                await prisma.passwordReset.update({
+                    where: { id: passwordReset.id },
+                    data: { used: true }
+                });
+                throw new Error('TOKEN_EXPIRADO');
             }
 
             // Criptografar nova senha
@@ -221,88 +265,16 @@ export class AuthService {
                 data: { used: true }
             });
 
+            // Limpar tokens expirados deste email
+            await this.cleanupExpiredTokens(passwordReset.email);
+
             return { message: 'Senha atualizada com sucesso' };
         } catch (error) {
-            if (error instanceof Error) throw error;
-            throw new Error('Erro ao redefinir senha');
-        }
-    }
-
-    // OAuth signin - criar ou encontrar usuário com provider OAuth
-    async oauthSignin(email: string, name: string, image: string | undefined, provider: string, providerId: string) {
-        try {
-            // Primeiro, verificar se já existe um usuário com esse email
-            let usuario = await prisma.user.findUnique({
-                where: { email }
-            });
-
-            // Se não existir, criar um novo usuário
-            if (!usuario) {
-                // Gerar um username único baseado no email
-                const baseUsername = email.split('@')[0];
-                let username = baseUsername;
-                let counter = 1;
-
-                // Verificar se o username já existe e gerar um único
-                while (await prisma.user.findUnique({ where: { username } })) {
-                    username = `${baseUsername}${counter}`;
-                    counter++;
-                }
-
-                usuario = await prisma.user.create({
-                    data: {
-                        email,
-                        name,
-                        username,
-                        avatar: image || '',
-                        bio: '',
-                        password: '', // OAuth users não precisam de senha
-                        role: Role.FREE
-                    }
-                });
-            } else {
-                // Se o usuário já existe, atualizar informações se necessário
-                usuario = await prisma.user.update({
-                    where: { id: usuario.id },
-                    data: {
-                        name, // Atualizar nome se mudou
-                        avatar: image || usuario.avatar // Atualizar avatar se fornecido
-                    }
-                });
-            }
-
-            // Criar o token JWT
-            const token = jwt.sign(
-                {
-                    userId: usuario.id,
-                    email: usuario.email,
-                    role: usuario.role
-                },
-                process.env.JWT_SECRET || 'seu_segredo_super_secreto',
-                { expiresIn: '10d' }
-            );
-
-            if (!token) {
-                throw new Error('Erro ao gerar token');
-            }
-
-            // Retornar token e informações do usuário
-            return {
-                token,
-                user: {
-                    id: usuario.id,
-                    nome: usuario.name,
-                    email: usuario.email,
-                    role: usuario.role,
-                    avatar: usuario.avatar
-                }
-            };
-        } catch (error) {
-            console.error('Erro no OAuth signin:', error);
             if (error instanceof Error) {
+                // Propagar erros específicos
                 throw error;
             }
-            throw new Error('Erro no processo de OAuth signin');
+            throw new Error('Erro ao redefinir senha');
         }
     }
 

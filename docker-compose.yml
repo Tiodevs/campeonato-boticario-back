@@ -1,0 +1,21 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: foco_total_backend
+    env_file:
+      - ./.env
+    environment:
+      NODE_ENV: production
+    ports:
+      - "4000:4000"
+    restart: unless-stopped
+    command: ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
+    networks:
+      - foco_net
+
+networks:
+  foco_net:
+    driver: bridge
+

@@ -28,7 +28,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
         const decoded = jwt.verify(token, envs.auth.jwtSecret) as JwtPayload;
         
         // Adicionar dados do usuário ao request
-        (req as any).user = {
+        req.user = {
             userId: decoded.userId,
             email: decoded.email,
             role: decoded.role

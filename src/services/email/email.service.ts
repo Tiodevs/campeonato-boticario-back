@@ -1,45 +1,58 @@
-import * as nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { envs } from '../../config/env';
 
 export class EmailService {
-  private transporter: nodemailer.Transporter;
+  private resendClient: Resend;
   private sender: string;
 
-  constructor() {
-    this.sender = envs.email.sender;
-    
-    // Criar o transportador do Nodemailer
-    this.transporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 465,
-        secure: true,
-        auth: {
-          user: envs.email.user,
-          pass: envs.email.password,
-        }
-    });
+  constructor(resendClient?: Resend) {
+    this.sender = envs.resend.sender;
+
+    if (!envs.resend.apiKey || !envs.resend.apiKey.trim()) {
+      throw new Error('Resend API key não configurada. Defina RESEND_API_KEY no arquivo .env.');
+    }
+
+    this.resendClient = resendClient ?? new Resend(envs.resend.apiKey);
+  }
+
+  private getSenderEmail(): string {
+    const normalizedSender = this.sender?.trim() || envs.resend.sender?.trim();
+
+    if (!normalizedSender) {
+      throw new Error('Remetente de email não configurado. Defina EMAIL_SENDER ou EMAIL_USER no arquivo .env.');
+    }
+
+    return normalizedSender;
+  }
+
+  private async sendEmail(payload: {
+    from: string;
+    to: string;
+    subject: string;
+    html: string;
+  }) {
+    await this.resendClient.emails.send(payload);
   }
 
   // Envia email de boas-vindas para novos usuários
   async enviarEmailBoasVindas(nome: string, email: string) {
     try {
       const data = {
-        from: `Aspas Note <${this.sender}>`,
+        from: `Foco Total <${this.getSenderEmail()}>`,
         to: email,
-        subject: 'Bem-vindo à Aspas Note!',
+        subject: 'Bem-vindo à Foco Total!',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h1 style="color: #333; text-align: center;">Bem-vindo à Aspas Note!</h1>
+            <h1 style="color: #333; text-align: center;">Bem-vindo à Foco Total!</h1>
             <p>Olá ${nome},</p>
             <p>Seja bem-vindo à nossa plataforma! Estamos felizes em tê-lo como parte da nossa comunidade.</p>
             <p>Se tiver alguma dúvida ou precisar de ajuda, não hesite em entrar em contato conosco.</p>
-            <p>Atenciosamente,<br>Equipe Aspas Note</p>
+            <p>Atenciosamente,<br>Equipe Foco Total</p>
           </div>
         `
       };
 
-      // Enviar o email usando Nodemailer
-      await this.transporter.sendMail(data);
+      await this.sendEmail(data);
       
       return { success: true, message: 'Email de boas-vindas enviado com sucesso' };
     } catch (error) {
@@ -54,7 +67,7 @@ export class EmailService {
       const template = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px;">
-            <h2 style="color: #333; margin-bottom: 20px;">Bem-vindo(a) à Aspas Note! 🎉</h2>
+            <h2 style="color: #333; margin-bottom: 20px;">Bem-vindo(a) à Foco Total! 🎉</h2>
             
             <p style="color: #555; font-size: 16px; line-height: 1.5;">
               Olá ${nome},
@@ -87,10 +100,10 @@ export class EmailService {
         </div>
       `;
 
-      await this.transporter.sendMail({
-        from: `"SumyIA" <${process.env.EMAIL_USER}>`,
+      await this.sendEmail({
+        from: `"Foco Total" <${this.getSenderEmail()}>`,
         to: email,
-        subject: "Suas Credenciais de Acesso - SumyIA",
+        subject: "Suas Credenciais de Acesso - Foco Total",
         html: template
       });
 
@@ -105,9 +118,9 @@ export class EmailService {
    async enviarEmailRecuperacaoSenha(nome: string, email: string, resetLink: string) {
     try {
       const data = {
-        from: `Aspas Note <${this.sender}>`,
+        from: `Foco Total <${this.getSenderEmail()}>`,
         to: email,
-        subject: 'Recuperação de Senha - Aspas Note',
+        subject: 'Recuperação de Senha - Foco Total',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
             <h1 style="color: #333; text-align: center;">Recuperação de Senha</h1>
@@ -118,12 +131,12 @@ export class EmailService {
             </p>
             <p>Se você não solicitou esta alteração, ignore este email.</p>
             <p>O link é válido por 1 hora.</p>
-            <p>Atenciosamente,<br>Equipe Aspas Note</p>
+            <p>Atenciosamente,<br>Equipe Foco Total</p>
           </div>
         `
       };
 
-      const info = await this.transporter.sendMail(data);
+      await this.sendEmail(data);
       
       return { success: true, message: 'Email de recuperação enviado com sucesso' };
     } catch (error) {
